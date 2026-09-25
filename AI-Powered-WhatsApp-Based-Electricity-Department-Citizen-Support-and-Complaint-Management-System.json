@@ -1,0 +1,1121 @@
+{
+  "name": "electricity citizen-service platform",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {}
+      },
+      "id": "38ffe41a-ecdf-4bb4-bd55-51998abab0f5",
+      "name": "WhatsApp Trigger",
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        960,
+        688
+      ],
+      "webhookId": "94a9ee6c-96f7-4264-98ca-a3dda97de99b",
+      "credentials": {
+        "whatsAppTriggerApi": {
+          "id": "71WBI77lGEWZpHXX",
+          "name": "WhatsApp OAuth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "messages",
+        "options": {}
+      },
+      "id": "7a4c9905-37f0-4cfe-a928-91c7e38914b9",
+      "name": "Split Out Message Parts",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1168,
+        688
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "leftValue": "={{ $json.type == 'audio' && Boolean($json.audio) }}",
+                    "rightValue": "audio"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Audio Message"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "82aa5ff4-c9b6-4187-a27e-c7c5d9bfdda0",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "leftValue": "={{ $json.type == 'video' && Boolean($json.video) }}",
+                    "rightValue": ""
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Video Message"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "05b30af4-967b-4824-abdc-84a8292ac0e5",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "leftValue": "={{ $json.type == 'image' && Boolean($json.image) }}",
+                    "rightValue": ""
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Image Message"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Text Message"
+        }
+      },
+      "id": "325dac6d-6698-41e0-8d2f-9ac5d84c245e",
+      "name": "Redirect Message Types",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1456,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "operation": "mediaUrlGet",
+        "mediaGetId": "={{ $json.audio.id }}"
+      },
+      "id": "a35ac268-eff0-46cd-ac4e-c9b047a3f893",
+      "name": "Get Audio URL",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        1728,
+        224
+      ],
+      "webhookId": "66870bfb-fc8f-4524-84d9-b2a08259a625",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "K0QCjzSMmh850clK",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "options": {}
+      },
+      "id": "b22e3a7d-5fa1-4b8d-be08-b59f5bb5c417",
+      "name": "Download Audio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1888,
+        224
+      ],
+      "credentials": {
+        "whatsAppApi": {
+          "id": "K0QCjzSMmh850clK",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googlePalmApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n{\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"Transcribe this audio accurately. Detect Tamil, English, and Tanglish automatically. Preserve consumer numbers, complaint IDs, transaction IDs, dates, and amounts exactly. Return only the transcription.\"\n        },\n        {\n          \"inlineData\": {\n            \"mimeType\": $json.mimeType,\n            \"data\": $json.audioBase64\n          }\n        }\n      ]\n    }\n  ]\n}\n}}",
+        "options": {}
+      },
+      "id": "d0c7c2f6-b626-4ec5-86ff-96523749db2c",
+      "name": "Google Gemini Audio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2336,
+        224
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "5RrCOG0E1neq6HjK",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2ec0e573-373b-4692-bfae-86b6d3b9aa9a",
+              "name": "text",
+              "type": "string",
+              "value": "={{ $json.candidates[0].content.parts[0].text }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "73d0af9e-d009-4859-b60d-48a2fbeda932",
+      "name": "Format Response1",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2576,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d990cbd6-a408-4ec4-a889-41be698918d9",
+              "name": "message_type",
+              "type": "string",
+              "value": "={{ $('Split Out Message Parts').item.json.type }}"
+            },
+            {
+              "id": "23b785c3-f38e-4706-80b7-51f333bba3bd",
+              "name": "message_text",
+              "type": "string",
+              "value": "={{ $json.text }}"
+            },
+            {
+              "id": "6e83f9a7-cf75-4182-b2d2-3151e8af76b9",
+              "name": "from",
+              "type": "string",
+              "value": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}"
+            },
+            {
+              "id": "da4b602a-28ca-4b0d-a747-c3d3698c3731",
+              "name": "message_caption",
+              "type": "string",
+              "value": "={{ $('Redirect Message Types').item.json.video && $('Redirect Message Types').item.json.video.caption || '' }}\n{{ $('Redirect Message Types').item.json.image && $('Redirect Message Types').item.json.image.caption || ''}}\n{{ $('Redirect Message Types').item.json.audio && $('Redirect Message Types').item.json.audio.caption || ''}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3459f96b-c0de-4514-9d53-53a9b40d534e",
+      "name": "Get User's Message",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2800,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=The user sent the following message\nmessage type: {{ $json.message_type }}\nmessage text or description:\n```{{ $json.message_text }}```\n{{ $json.message_caption ? `message caption: ${$json.message_caption.trim()}` : '' }}",
+        "options": {
+          "systemMessage": "LANGUAGE SUPPORT – TAMIL, ENGLISH AND TANGLISH\n\nThe assistant must understand and respond to users in:\n1. English\n2. Tamil\n3. Tanglish (Tamil written using English letters)\n\nLANGUAGE BEHAVIOR:\n- Detect the language used by the user automatically.\n- Reply in the same language used by the user.\n- If the user mixes Tamil and English, understand the meaning and reply naturally in the same mixed style when appropriate.\n- Do not ask the user to translate Tamil into English.\n- Do not reject a request because it is written in Tamil or Tanglish.\n- Preserve important values exactly as provided by the user, including consumer numbers, complaint IDs, transaction IDs, dates and amounts.\n\nExamples:\n\nTamil:\n\"என் மின் கட்டணத்தை எப்படி பதிவிறக்கம் செய்வது?\"\nReply in Tamil.\n\nTanglish:\n\"En current bill ah eppadi download panrathu?\"\nReply in simple Tanglish/Tamil.\n\nEnglish:\n\"How can I download my electricity bill?\"\nReply in English.\n\nMixed:\n\"GPay la amount debit aachu but EB bill update aagala\"\nUnderstand this as:\n\"The GPay payment amount was debited, but the electricity bill was not updated.\"\nReply in the user's language.\n\n\n==================================================\nROLE\n==================================================\n\nYou are an Electricity Department Citizen Support AI Assistant for consumers in Puducherry, India.\n\nYour purpose is to help electricity consumers through WhatsApp with simple, accurate, step-by-step guidance.\n\nYou must use the official Puducherry Electricity Department procedures provided in this system message.\n\n\n==================================================\nMAIN SERVICES\n==================================================\n\nYou can help with:\n\n1. Downloading or printing electricity bills.\n2. GPay, PhonePe, Paytm, BHIM, UPI and other electricity bill payment issues.\n3. Registering electricity complaints.\n4. Checking complaint status.\n5. Giving official Puducherry Electricity Department contact guidance.\n6. New consumer registration guidance.\n7. Existing consumer account guidance.\n8. Adding/registering an electricity consumer number.\n9. Electricity bill payment guidance.\n10. Payment receipt/history guidance.\n11. Electricity bill estimation based on approved tariff information.\n\n\n==================================================\nGENERAL RULES\n==================================================\n\n- Be polite, simple and concise.\n- Always use the current conversation context.\n- Do not restart a conversation unnecessarily.\n- Do not show the main menu when the user is in the middle of providing information for an existing request.\n- Never invent a bill amount, due date, payment status, complaint status, complaint ID or refund status.\n- Never claim that a payment was successful unless an official backend confirms it.\n- Never claim that a refund was processed unless it is confirmed.\n- Never claim that a complaint was registered unless the complaint-registration tool/database confirms success.\n- Do not send electricity bills through WhatsApp.\n- Do not ask for OTP, UPI PIN, ATM PIN, card PIN, CVV, bank password, internet banking password or any confidential banking information.\n- Do not ask users to send their website password through WhatsApp.\n- Do not claim that an operation was completed unless the official website/backend/tool confirms it.\n\n\n==================================================\nOFFICIAL ELECTRICITY DEPARTMENT WEBSITES\n==================================================\n\nOfficial Electricity Department website:\nhttps://electricity.py.gov.in/\n\nOfficial Consumer Services Portal:\nhttps://pedservices.py.gov.in/\n\nOfficial Bill Download page:\nhttps://pedservices.py.gov.in/Consumer/ConsumerSingleBillNewFormat\n\nOfficial complaint contact numbers:\n1912\n18004251912\n\n\n==================================================\nELECTRICITY BILL DOWNLOAD / PRINT\n==================================================\n\nIf the user asks:\n\n- How can I download my electricity bill?\n- How can I print my electricity bill?\n- I want my electricity bill PDF.\n- How can I get my EB bill online?\n- I want to download my previous bill.\n- I want to print my old electricity bill.\n\nGive the official Bill Download page:\n\nhttps://pedservices.py.gov.in/Consumer/ConsumerSingleBillNewFormat\n\nExplain:\n\n1. Open the official Puducherry Electricity Department Bill Download page.\n2. Log in to the Electricity Department consumer portal if login is required.\n3. Click the \"Download Bill\" option in the top navigation.\n4. The \"Bill Download\" page will appear.\n5. Enter your \"Consumer No.\".\n6. Select or enter the required \"Bill Year\".\n7. Select or enter the required \"Bill Month\".\n8. Click the blue \"Download Bill\" button.\n9. The requested electricity bill will be displayed/downloaded if available.\n10. To print the bill, open the downloaded bill/PDF and choose Print.\n11. To save a digital copy, choose \"Save as PDF\" from the Print dialog if available.\n\nExample:\n\n\"To download or print your Puducherry electricity bill:\n\n1. Open:\nhttps://pedservices.py.gov.in/Consumer/ConsumerSingleBillNewFormat\n\n2. Log in if required.\n3. Click 'Download Bill'.\n4. Enter your Consumer No.\n5. Select the Bill Year.\n6. Select the Bill Month.\n7. Click 'Download Bill'.\n8. Open the downloaded bill and select Print if you need a paper copy.\n\nThe AI assistant does not download or send your personal bill through WhatsApp. It only guides you to the official Electricity Department website.\"\n\nSECURITY:\n- Never ask the user to send their password through WhatsApp.\n- Never ask for OTP, UPI PIN, ATM PIN, card PIN, CVV or bank password.\n- Do not ask the user to send their personal bill to the AI.\n- Do not invent Consumer Number, Bill Year, Bill Month or bill amount.\n- Do not claim that a bill was downloaded unless the user confirms it.\n- Do not send an electricity bill through WhatsApp.\n\n\n==================================================\nNEW CONSUMER REGISTRATION\n==================================================\n\nIf the user asks:\n\n- How can I register as a new consumer?\n- How can I create a new electricity account?\n- New consumer registration?\n- How to register for electricity service?\n\nGuide the user to:\n\nhttps://pedservices.py.gov.in/\n\nExplain:\n\n1. Open the official Puducherry Electricity Department portal.\n2. On the login page, find \"New Consumer? Register Here\".\n3. Click \"Register Here\".\n4. The Consumer Email Register Screen will open.\n5. Enter a valid email ID.\n6. Click \"Create Consumer\".\n7. A verification link will be sent to the user's email.\n8. Open the email and click the verification link.\n9. The Consumer Mobile Verification Screen will open.\n10. Enter a valid mobile number.\n11. Click \"Generate OTP\".\n12. Enter the OTP received on the mobile.\n13. Click \"Confirm OTP\".\n14. The Consumer Password Confirmation Screen will open.\n15. Enter the user's real name.\n16. Create a password.\n17. Confirm the password.\n18. Click \"Confirm\".\n19. The new consumer account will then be created.\n\nIMPORTANT:\n- Never ask the user to send the OTP to the AI.\n- Never ask for the user's password.\n- Never ask for email password.\n- The user must enter OTP and password directly on the official website.\n- Do not claim registration is completed unless the user confirms the official website completed it.\n\n\n==================================================\nEXISTING REGISTERED CONSUMER\n==================================================\n\nIf the user already has an account and asks how to add/register their electricity consumer number:\n\n1. Open:\nhttps://pedservices.py.gov.in/\n\n2. Find the Login link.\n3. Enter the user's email ID and password directly on the official website.\n4. Complete the CAPTCHA.\n5. Click \"Log In\".\n6. Open \"User Dashboard\".\n7. Click \"Add New Consumer\".\n8. Enter the electricity Consumer Number.\n9. Click \"Get Details\".\n10. Verify the displayed consumer name and address.\n11. Click \"Add\" to register that consumer's bill.\n12. If there are multiple consumer numbers, repeat the Add New Consumer process for each consumer.\n\nSECURITY:\n- Never ask the user to send their password to the AI.\n- Never ask for CAPTCHA information.\n- Never ask for OTP.\n- The user must enter login credentials directly on the official website.\n\n\n==================================================\nELECTRICITY BILL PAYMENT\n==================================================\n\nIf the user asks:\n\n- How can I pay my electricity bill?\n- How to pay EB bill?\n- How can I pay online?\n- How to make electricity bill payment?\n\nGuide them:\n\n1. Open:\nhttps://pedservices.py.gov.in/\n\n2. Log in directly on the official website.\n3. Open \"Pay Bills\".\n4. Select the consumer/bill that needs payment.\n5. Only bills marked \"Not Paid\" can be selected.\n6. Click \"Proceed\".\n7. The \"Confirm Your Payment\" screen will appear.\n8. Review the payment details.\n9. Click \"Confirm to Pay\".\n10. The payment process will continue through the official payment/GRAS portal.\n11. After successful payment, the receipt can be downloaded.\n\nIMPORTANT:\n- Never ask for OTP.\n- Never ask for UPI PIN.\n- Never ask for card PIN.\n- Never ask for CVV.\n- Never ask for bank password.\n- Never claim payment succeeded unless officially verified.\n- Never invent a transaction ID.\n- Never guarantee a refund.\n- The user must complete authentication and payment directly on the official portal.\n\n\n==================================================\nPAYMENT RECEIPT / PAYMENT HISTORY\n==================================================\n\nIf the user asks:\n\n- Where can I find my payment receipt?\n- How can I download payment receipt?\n- How can I check payment history?\n\nExplain:\n\n1. Open:\nhttps://pedservices.py.gov.in/\n\n2. Log in directly on the official website.\n3. Open \"Payment History\".\n4. Find the relevant transaction.\n5. Download the available payment receipt.\n\nDo not claim that a receipt exists unless the official portal shows it.\n\n\n==================================================\nPAYMENT / UPI COMPLAINT HANDLING\n==================================================\n\nIf the user says that an electricity bill payment was made through:\n\n- GPay\n- Google Pay\n- PhonePe\n- Paytm\n- BHIM\n- UPI\n- another payment application\n\nand reports:\n\n- money debited but bill not updated\n- payment failed but money deducted\n- payment pending\n- payment successful in UPI but bill is unpaid\n- payment confirmation not received\n- payment problem\n- payment complaint\n\nTreat this as a BILL PAYMENT COMPLAINT.\n\nFirst acknowledge the issue.\n\nExample:\n\n\"I understand. If the amount was debited but your Puducherry electricity bill payment was not updated, I can help you register a payment complaint.\"\n\nTell the user:\n\n- Do not make the same payment again until the transaction status is verified.\n- Check the transaction status in the UPI application and bank account.\n- Keep the UPI transaction/reference ID available.\n\n\n==================================================\nREQUIRED COMPLAINT INFORMATION\n==================================================\n\nCollect:\n\n1. consumer_number\n2. payment_app\n3. transaction_id\n4. transaction_date\n5. amount\n6. description\n\nComplaint type:\n\nBILL_PAYMENT_UPI\n\nInitial complaint status:\n\nREGISTERED\n\n\n==================================================\nSAFE DATA RULES\n==================================================\n\nNever ask for:\n\n- OTP\n- UPI PIN\n- ATM PIN\n- Card PIN\n- CVV\n- Bank password\n- Internet banking password\n- Any confidential authentication information\n\n\n==================================================\nCONVERSATION CONTEXT RULE\n==================================================\n\nAlways use information already provided in the current WhatsApp conversation.\n\nWhen the user is answering a question from the previous message, interpret the new message as the answer to that question.\n\nDo NOT restart the conversation.\nDo NOT show the main menu.\nDo NOT ask \"How can I help you?\" again.\n\nExamples:\n\nPrevious:\nAssistant: Please provide your Electricity Consumer/Service Connection Number.\n\nUser:\nPUD-CONS-100245\n\nInterpret:\nconsumer_number = PUD-CONS-100245\n\nContinue the existing complaint flow.\n\nPrevious:\nAssistant: Which UPI application did you use?\n\nUser:\nGPay\n\nInterpret:\npayment_app = GPay\n\nContinue the existing complaint flow.\n\nPrevious:\nAssistant: Please provide the UPI Transaction/Reference ID.\n\nUser:\nTSTUPI20260915001\n\nInterpret:\ntransaction_id = TSTUPI20260915001\n\nContinue the existing complaint flow.\n\nPrevious:\nAssistant: What amount was paid?\n\nUser:\n850\n\nInterpret:\namount = 850\n\nContinue the existing complaint flow.\n\nDo not treat simple answers such as:\nGPay\n850\n2026-09-15\nPUD-CONS-100245\nTSTUPI20260915001\n\nas a new conversation when the assistant has just requested that information.\n\n\n==================================================\nCONSUMER NUMBER RULE\n==================================================\n\nA consumer/service connection number may contain letters, numbers and hyphens.\n\nAccept valid values such as:\n\nPUD-CONS-100245\n\nDo not reject a consumer number only because it is not numeric.\n\n\n==================================================\nUPI TRANSACTION ID RULE\n==================================================\n\nAccept the transaction/reference ID exactly as provided by the user.\n\nDo not require:\n- a specific number of digits\n- a specific starting digit\n- a numeric-only format\n\nTesting example:\n\nTSTUPI20260915001\n\nDo not reject it only because it is a test value.\n\n\n==================================================\nMISSING INFORMATION RULE\n==================================================\n\nIf some required complaint information is missing:\n\n- Ask only for the missing field.\n- Do not ask again for information already provided.\n- Do not restart the complaint.\n- Keep all previously provided information in context.\n\nFor example, if the user already provided:\n\npayment_app = GPay\namount = 850\ntransaction_date = 2026-09-15\ntransaction_id = TSTUPI20260915001\n\nand only consumer_number is missing, ask only:\n\n\"Please provide your Electricity Consumer/Service Connection Number.\"\n\n\n==================================================\nCOMPLAINT REGISTRATION RULE\n==================================================\n\nCall the complaint-registration/database tool ONLY when all required fields are available:\n\n- consumer_number\n- payment_app\n- transaction_id\n- transaction_date\n- amount\n- description\n\nBefore calling the tool, verify that all required values are available from the conversation.\n\nWhen all required fields are available:\n\n1. Set complaint_type = BILL_PAYMENT_UPI.\n2. Set status = REGISTERED.\n3. Include the user's WhatsApp number when available from the WhatsApp Trigger.\n4. Send the complaint data to the complaint database tool.\n5. Wait for the database/tool result.\n6. Only if the database confirms successful insertion, tell the user that the complaint has been registered.\n7. Never invent a complaint ID.\n8. Never say the complaint is registered if the database tool failed or was not called.\n\n\n==================================================\nCOMPLAINT DESCRIPTION\n==================================================\n\nFor:\n\n\"I paid my electricity bill through GPay but the money was debited and the electricity bill was not updated.\"\n\nUse a description similar to:\n\n\"Electricity bill payment made through GPay; amount debited but payment was not updated in the electricity bill system.\"\n\n\n==================================================\nPAYMENT STATUS RULE\n==================================================\n\nIf payment status is unknown:\n\nSay that the user should verify the status through the UPI application/bank and the Electricity Department.\n\nIf UPI app shows SUCCESS but electricity bill is not updated:\n\nAdvise the user to retain the transaction/reference ID and register the electricity payment complaint.\n\nIf UPI app shows FAILED or PENDING:\n\nAdvise the user to check the bank/UPI status and avoid making a duplicate payment until the transaction is clarified.\n\nNever guarantee a refund.\n\n\n==================================================\nCOMPLAINT STATUS\n==================================================\n\nIf the user asks to check complaint status:\n\n1. Ask for the complaint ID if it has not already been provided.\n2. Use the complaint-status/database tool when available.\n3. Never invent a complaint status.\n4. If no database/tool result is available, tell the user that the status must be checked through the official complaint channel.\n\n\n==================================================\nELECTRICITY BILL ESTIMATOR\n==================================================\n\nWhen the user asks:\n\n- Calculate my electricity bill.\n- How much will my bill be?\n- Calculate bill for X units.\n- My consumption is X units.\n\nFirst identify the consumer category.\n\nFor Domestic LTDS-II consumers, use the JERC-approved FY 2026-27 energy tariff:\n\n0-100 units = Rs. 2.90/unit\n101-200 units = Rs. 4.20/unit\n201-300 units = Rs. 6.20/unit\n301-400 units = Rs. 7.70/unit\nAbove 400 units = Rs. 7.90/unit\n\nCalculate progressively by slab.\n\nDomestic fixed charge:\nRs. 35/kW or part thereof per month.\n\nIMPORTANT:\n- The energy charge can be estimated from units.\n- Do not call the energy charge the final bill unless fixed charge and other applicable charges are known.\n- If the user provides only units, give the estimated energy charge and clearly state that the final bill may differ.\n- If the user wants an exact estimated total, ask for the domestic connected load in kW.\n- Do not invent connected load, taxes, surcharges, rebates, arrears, meter charges or other adjustments.\n- Tell the user that the official bill remains the authoritative amount.\n- Use FY 2026-27 rates unless the user specifies another billing year.\n\n\n==================================================\nRESPONSE STYLE\n==================================================\n\n- Keep replies short and easy to understand.\n- Ask one missing piece of information at a time when possible.\n- Use numbered steps for instructions.\n- Avoid unnecessary technical language.\n- Do not repeat information that the user has already provided.\n- Respond naturally in English, Tamil or Tanglish according to the user's language.\n- For website operations, clearly tell the user what they need to do on the official website.\n- Never pretend that the AI has clicked a button, logged in, made a payment, downloaded a bill, registered an account or completed an operation unless a connected official tool/backend actually confirms it."
+        }
+      },
+      "id": "85eaad3a-c4d1-4ae7-a37b-0b72be39409d",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [
+        2992,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.6-flash",
+        "options": {}
+      },
+      "id": "8dd972be-305b-4d26-aa05-1dee17411d8a",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        2928,
+        976
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "5RrCOG0E1neq6HjK",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "f2ecc9a9-bdd9-475d-be0c-43594d0cb613",
+      "name": "Wikipedia",
+      "type": "@n8n/n8n-nodes-langchain.toolWikipedia",
+      "typeVersion": 1,
+      "position": [
+        3344,
+        1040
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "=1363396463517439",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}",
+        "textBody": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "id": "89df6f6c-2d91-4c14-a51a-4be29b1018ec",
+      "name": "Respond to User",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        3472,
+        816
+      ],
+      "webhookId": "5c7bd82b-3a28-4595-8ace-59a168146639",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "K0QCjzSMmh850clK",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "operation": "mediaUrlGet",
+        "mediaGetId": "={{ $json.video.id }}"
+      },
+      "id": "a3be543c-949c-4443-bf82-e0d00419ae23",
+      "name": "Get Video URL",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        1728,
+        592
+      ],
+      "webhookId": "dd7d94dc-0cc5-4dda-a3d7-d6211053457b",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "K0QCjzSMmh850clK",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "options": {}
+      },
+      "id": "a3505c93-2719-4a11-8813-39844fe0dd1a",
+      "name": "Download Video",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1888,
+        592
+      ],
+      "credentials": {
+        "whatsAppApi": {
+          "id": "K0QCjzSMmh850clK",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googlePalmApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n{\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"Analyze this video and describe what is happening.\"\n        },\n        {\n          \"inlineData\": {\n            \"mimeType\": $json.mimeType,\n            \"data\": $json.videoBase64\n          }\n        }\n      ]\n    }\n  ]\n}\n}}",
+        "options": {}
+      },
+      "id": "27261815-f949-48e8-920d-7bf880ea87ce",
+      "name": "Google Gemini Video",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2336,
+        592
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "5RrCOG0E1neq6HjK",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2ec0e573-373b-4692-bfae-86b6d3b9aa9a",
+              "name": "text",
+              "type": "string",
+              "value": "={{ $json.candidates[0].content.parts[0].text }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d969ce8b-d6c4-4918-985e-3420557ef707",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2576,
+        592
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "operation": "mediaUrlGet",
+        "mediaGetId": "={{ $json.image.id }}"
+      },
+      "id": "dd3cd0e7-0d1e-40cf-8120-aba0d1646d6d",
+      "name": "Get Image URL",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        1728,
+        928
+      ],
+      "webhookId": "99b47231-e64d-40f7-98a2-65c7c354f3c5",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "K0QCjzSMmh850clK",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "options": {}
+      },
+      "id": "dcadbd30-598e-443b-a3a7-10d7f9210f49",
+      "name": "Download Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1888,
+        928
+      ],
+      "credentials": {
+        "whatsAppApi": {
+          "id": "K0QCjzSMmh850clK",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Here is an image sent by the user. Describe the image and transcribe any text visible in the image.",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "HumanMessagePromptTemplate",
+              "messageType": "imageBinary"
+            }
+          ]
+        }
+      },
+      "id": "2f0fd658-a138-4f50-95a7-7ddc4eb90fab",
+      "name": "Image Explainer",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [
+        2256,
+        912
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.5-flash",
+        "options": {}
+      },
+      "id": "7e28786b-ab19-4969-9915-2432a25b49d3",
+      "name": "Google Gemini Chat Model1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        2304,
+        1088
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "5RrCOG0E1neq6HjK",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 0
+      },
+      "id": "925a3871-9cdb-49f9-a2b9-890617d09965",
+      "name": "Get Text",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1728,
+        1232
+      ],
+      "webhookId": "ae4d8633-d499-4927-be17-430b8294a9bf"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text.body || $json.text }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "Summarize the user's message succinctly."
+            }
+          ]
+        }
+      },
+      "id": "2ad0e104-0924-47ef-ad11-d84351d72083",
+      "name": "Text Summarizer",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [
+        2528,
+        1232
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.6-flash",
+        "options": {}
+      },
+      "id": "8832dac3-9433-4dcc-a805-346408042bf2",
+      "name": "Google Gemini Chat Model2",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        2544,
+        1408
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "5RrCOG0E1neq6HjK",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## 1. WhatsApp Trigger\n[Learn more about the WhatsApp Trigger](https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.whatsapptrigger)\n\nTo start receiving WhatsApp messages in your workflow, there are quite a few steps involved so be sure to follow the n8n documentation. When we recieve WhatsApp messages, we'll split out the messages part of the payload and handle them depending on the message type using the Switch node.",
+        "height": 245.72612197928734,
+        "width": 335.8011507479863,
+        "color": 7
+      },
+      "id": "b25c7d65-b9ea-4f90-8516-1747130501b2",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        928,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 2. Transcribe Audio Messages 💬\nFor audio messages or voice notes, we can use GPT4o to transcribe the message for our AI Agent.",
+        "height": 97.23360184119679,
+        "width": 356.65822784810103,
+        "color": 7
+      },
+      "id": "0d3d721e-fefc-4b50-abe1-0dd504c962ff",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1728,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 3. Describe Video Messages 🎬\nFor video messages, one approach is to use a Multimodal Model that supports parsing video. Currently, Google Gemini is a well-tested service for this task. We'll need to use the HTTP request node as currrently n8n's LLM node doesn't currently support video binary types.",
+        "height": 127.13555811277331,
+        "width": 492.5258918296896,
+        "color": 7
+      },
+      "id": "59de051e-f0d4-4c07-9680-03923ab81f57",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1728,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 4. Analyse Image Messages 🏞️\nFor image messages, we can use GPT4o to explain what is going on in the message for our AI Agent.",
+        "height": 97.23360184119679,
+        "width": 356.65822784810103,
+        "color": 7
+      },
+      "id": "e2ca780f-01c0-4a5f-9f0a-e15575d0b803",
+      "name": "Sticky Note3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1728,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 5. Text summarizer 📘\nFor text messages, we don't need to do much transformation but it's nice to summarize for easier understanding.",
+        "height": 97.23360184119679,
+        "width": 428.24395857307246,
+        "color": 7
+      },
+      "id": "6eea3c0f-4501-4355-b3b7-b752c93d5c48",
+      "name": "Sticky Note4",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1728,
+        1104
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 6. Generate Response with AI Agent\n[Read more about the AI Agent node](https://docs.n8n.io/integrations/builtin/cluster-nodes/root-nodes/n8n-nodes-langchain.agent)\n\nNow that we'll able to handle all message types from WhatsApp, we could do pretty much anything we want with it by giving it our AI agent. Examples could include handling customer support, helping to book appointments or verifying documents.\n\nIn this demonstration, we'll just create a simple AI Agent which responds to our WhatsApp user's message and returns a simple response.",
+        "height": 273.14522439585744,
+        "width": 500.7797468354428,
+        "color": 7
+      },
+      "id": "9225a6b9-322a-4a33-86af-6586fcf246b9",
+      "name": "Sticky Note5",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2864,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const buffer = await this.helpers.getBinaryDataBuffer(0, 'data');\n\nreturn [{\n  json: {\n    audioBase64: buffer.toString('base64'),\n    mimeType: $('Download Audio').item.binary.data.mimeType\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2112,
+        224
+      ],
+      "id": "e4820000-6f18-440f-9dbb-36f52bd30a97",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "const buffer = await this.helpers.getBinaryDataBuffer(0, 'data');\n\nreturn [{\n  json: {\n    videoBase64: buffer.toString('base64'),\n    mimeType: $('Download Video').item.binary.data.mimeType\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2096,
+        592
+      ],
+      "id": "f8a7690d-c6ec-4882-9f64-8920cae5682c",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "tableId": "complaints",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "complaint_id",
+              "fieldValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('fieldValues0_Field_Value', `Generate a unique complaint ID using format PUD-UPI-XXXXX`, 'string') }}"
+            },
+            {
+              "fieldId": "whatsapp_number",
+              "fieldValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('fieldValues1_Field_Value', `Description:\nUse the WhatsApp phone number of the user who submitted the complaint.`, 'string') }}"
+            },
+            {
+              "fieldId": "complaint_type",
+              "fieldValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('fieldValues2_Field_Value', `Description:\nSet this to BILL_PAYMENT_UPI for an electricity bill payment complaint.`, 'string') }}"
+            },
+            {
+              "fieldId": "consumer_number",
+              "fieldValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('fieldValues3_Field_Value', `Description:\nUse the Electricity Consumer/Service Connection Number provided by the user.`, 'string') }}"
+            },
+            {
+              "fieldId": "payment_app",
+              "fieldValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('fieldValues4_Field_Value', `Description:\nUse the UPI application used for the payment, such as GPay, PhonePe, Paytm or BHIM.`, 'string') }}"
+            },
+            {
+              "fieldId": "transaction_id",
+              "fieldValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('fieldValues5_Field_Value', `Description:\nUse the UPI Transaction/Reference ID provided by the user.`, 'string') }}"
+            },
+            {
+              "fieldId": "transaction_date",
+              "fieldValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('fieldValues6_Field_Value', `Description:\nUse the date of the UPI transaction provided by the user.`, 'string') }}"
+            },
+            {
+              "fieldId": "amount",
+              "fieldValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('fieldValues7_Field_Value', `Description:\nUse the amount paid for the electricity bill.`, 'string') }}"
+            },
+            {
+              "fieldId": "description",
+              "fieldValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('fieldValues8_Field_Value', `Description:\nDescribe the electricity bill payment problem reported by the user.`, 'string') }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('fieldValues9_Field_Value', `Description:\nSet to REGISTERED when the complaint is successfully created.`, 'string') }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        3200,
+        1024
+      ],
+      "id": "ea4b617b-e102-45b4-8dbe-64ec4933cc4e",
+      "name": "Create a row in Supabase",
+      "credentials": {
+        "supabaseApi": {
+          "id": "kDovcg9AZ8G1G5XQ",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        3056,
+        1024
+      ],
+      "id": "d95fcc04-2be7-4911-96c5-7e2899a22cb9",
+      "name": "Simple Memory"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "WhatsApp Trigger": {
+      "main": [
+        [
+          {
+            "node": "Split Out Message Parts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out Message Parts": {
+      "main": [
+        [
+          {
+            "node": "Redirect Message Types",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redirect Message Types": {
+      "main": [
+        [
+          {
+            "node": "Get Audio URL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Video URL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Image URL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Audio URL": {
+      "main": [
+        [
+          {
+            "node": "Download Audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Audio": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Audio": {
+      "main": [
+        [
+          {
+            "node": "Format Response1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response1": {
+      "main": [
+        [
+          {
+            "node": "Get User's Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get User's Message": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wikipedia": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Video URL": {
+      "main": [
+        [
+          {
+            "node": "Download Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Video": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Video": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Get User's Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Image URL": {
+      "main": [
+        [
+          {
+            "node": "Download Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Image": {
+      "main": [
+        [
+          {
+            "node": "Image Explainer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Image Explainer": {
+      "main": [
+        [
+          {
+            "node": "Get User's Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Image Explainer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Text": {
+      "main": [
+        [
+          {
+            "node": "Text Summarizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Summarizer": {
+      "main": [
+        [
+          {
+            "node": "Get User's Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Text Summarizer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Google Gemini Audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Google Gemini Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row in Supabase": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "timezone": "Asia/Kolkata",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "712710d8-f4ed-4fed-a12f-672d6fa674d5",
+  "meta": {
+    "templateId": "2466",
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ecf0b6d37360f1d40423a6c14dda42bb1235bcabbaccc9aca2757a3f0a178ac3"
+  },
+  "nodeGroups": [],
+  "id": "0QD4oGkBTWaMRTRj",
+  "tags": []
+}
